@@ -1,22 +1,24 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
+from datetime import timedelta
 import re
 import os
 from dotenv import load_dotenv
 
-# Load .env file
+#  Load token from .env
 load_dotenv()
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
-intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+tree = bot.tree
 
 warnings = {}
 
-# ⏱ Time parser (10m, 1h, etc.)
+#  Time parser (10m, 1h, etc.)
 def parse_time(time_str):
     match = re.match(r"^(\d+)(s|m|h|d)$", time_str)
     if not match:
@@ -26,60 +28,82 @@ def parse_time(time_str):
     value = int(value)
 
     if unit == "s":
-        return value
+        return timedelta(seconds=value)
     if unit == "m":
-        return value * 60
+        return timedelta(minutes=value)
     if unit == "h":
-        return value * 60 * 60
+        return timedelta(hours=value)
     if unit == "d":
-        return value * 24 * 60 * 60
+        return timedelta(days=value)
 
+#  When bot is ready
 @bot.event
 async def on_ready():
+    await tree.sync()
     print(f"Logged in as {bot.user}")
 
-# 🚫 BAN
-@bot.command()
-@commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member):
+#  BAN
+@tree.command(name="ban", description="Ban a member")
+@app_commands.checks.has_permissions(ban_members=True)
+async def ban(interaction: discord.Interaction, member: discord.Member):
     await member.ban()
-    await ctx.send(f"{member} has been banned.")
+    await interaction.response.send_message(f"{member} has been banned.")
 
-# 👢 KICK
-@bot.command()
-@commands.has_permissions(kick_members=True)
-async def kick(ctx, member: discord.Member):
+#  KICK
+@tree.command(name="kick", description="Kick a member")
+@app_commands.checks.has_permissions(kick_members=True)
+async def kick(interaction: discord.Interaction, member: discord.Member):
     await member.kick()
-    await ctx.send(f"{member} has been kicked.")
+    await interaction.response.send_message(f"{member} has been kicked.")
 
-# ⚠️ WARN
-@bot.command()
-async def warn(ctx, member: discord.Member):
+#  WARN
+@tree.command(name="warn", description="Warn a member")
+async def warn(interaction: discord.Interaction, member: discord.Member):
     user_id = str(member.id)
 
     if user_id not in warnings:
         warnings[user_id] = 0
 
     warnings[user_id] += 1
-    await ctx.send(f"{member} now has {warnings[user_id]} warning(s).")
 
-# 🔇 MUTE (timeout)
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def mute(ctx, member: discord.Member, time: str):
+    await interaction.response.send_message(
+        f"{member} now has {warnings[user_id]} warning(s)."
+    )
+
+#  MUTE (custom time)
+@tree.command(name="mute", description="Mute a member (e.g. 10m, 1h)")
+@app_commands.checks.has_permissions(moderate_members=True)
+async def mute(interaction: discord.Interaction, member: discord.Member, time: str):
     duration = parse_time(time)
 
     if duration is None:
-        return await ctx.send("Use format like 10s, 5m, 1h, 1d.")
+        return await interaction.response.send_message(
+            "Invalid format! Use 10s, 5m, 1h, 1d.",
+            ephemeral=True
+        )
 
-    # max 28 days
-    if duration > 28 * 24 * 60 * 60:
-        return await ctx.send("Max mute time is 28 days.")
+    if duration > timedelta(days=28):
+        return await interaction.response.send_message(
+            "Max mute time is 28 days.",
+            ephemeral=True
+        )
 
-    until = discord.utils.utcnow() + discord.timedelta(seconds=duration)
-    await member.timeout(until)
+    await member.timeout(duration)
 
-    await ctx.send(f"{member} has been muted for {time}.")
+    await interaction.response.send_message(
+        f"{member} has been muted for {time}."
+    )
 
-# Run bot with token from .env
+#  Permission error handlingr
+@ban.error
+@kick.error
+@mute.error
+async def mod_error(interaction: discord.Interaction, error):
+    if isinstance(error, app_commands.errors.MissingPermissions):
+        await interaction.response.send_message(
+            "You don't have permission to use this command.",
+            ephemeral=True
+        )
+
+#  Run bot
 bot.run(TOKEN)
