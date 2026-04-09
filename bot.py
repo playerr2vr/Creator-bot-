@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord import app_commands
 from datetime import timedelta, datetime, timezone
 import re
@@ -96,7 +96,6 @@ async def mute(interaction: discord.Interaction, member: discord.Member, time: s
     duration = parse_time(time)
     if not duration:
         return await interaction.response.send_message("Invalid format.", ephemeral=True)
-
     until = datetime.now(timezone.utc) + duration
     await member.timeout(until)
     await interaction.response.send_message(f"{member} muted for {time}")
@@ -126,7 +125,7 @@ async def ignore_user(interaction: discord.Interaction, member: discord.Member):
     ignored_users.add(member.id)
     await interaction.response.send_message(f"{member} is ignored.")
 
-# ================= FUN =================
+# ================= BASIC FUN =================
 @tree.command(name="coinflip", description="Flip a coin")
 async def coinflip(interaction: discord.Interaction):
     await interaction.response.send_message(random.choice(["Heads", "Tails"]))
@@ -149,12 +148,12 @@ async def reverse(interaction: discord.Interaction, text: str):
 async def mock(interaction: discord.Interaction, text: str):
     await interaction.response.send_message("".join(c.upper() if i % 2 else c.lower() for i, c in enumerate(text)))
 
-@tree.command(name="choose", description="Pick a random option")
+@tree.command(name="choose", description="Pick a random option from comma-separated list")
 async def choose(interaction: discord.Interaction, options: str):
-    choices = options.split(",")
+    choices = [o.strip() for o in options.split(",")]
     await interaction.response.send_message(random.choice(choices))
 
-@tree.command(name="repeat", description="Repeat your message")
+@tree.command(name="repeat", description="Repeat your message (max 5 times)")
 async def repeat(interaction: discord.Interaction, text: str, times: int):
     await interaction.response.send_message((text + "\n") * min(times, 5))
 
@@ -222,11 +221,101 @@ async def ping(interaction: discord.Interaction):
 async def time_cmd(interaction: discord.Interaction):
     await interaction.response.send_message(datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
 
-@tree.command(name="countdown", description="Simple countdown")
+@tree.command(name="countdown", description="Simple countdown (max 10s visible)")
 async def countdown(interaction: discord.Interaction, seconds: int):
     await interaction.response.send_message(f"Counting down {seconds}s...")
     await asyncio.sleep(min(seconds, 10))
     await interaction.followup.send("Done!")
+
+# ================= 20 EXTRA RARE COMMANDS =================
+@tree.command(name="fliptext", description="Flip text upside down")
+async def fliptext(interaction: discord.Interaction, text: str):
+    table = str.maketrans("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                          "ɐqɔpǝɟƃɥıɾʞʅɯuodbɹsʇnʌʍxʎz∀𐐒ƆᗡƎℲ⅁HIſʞ˥WNOԀQɹS⊥∩ΛMX⅄Z")
+    await interaction.response.send_message(text.translate(table))
+
+@tree.command(name="binary", description="Convert text to binary")
+async def binary(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(" ".join(format(ord(c), "08b") for c in text))
+
+@tree.command(name="hextext", description="Convert text to hex")
+async def hextext(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(" ".join(hex(ord(c))[2:] for c in text))
+
+@tree.command(name="wordcount", description="Count words in text")
+async def wordcount(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(f"{len(text.split())} words")
+
+@tree.command(name="shuffleletters", description="Shuffle letters in text")
+async def shuffleletters(interaction: discord.Interaction, text: str):
+    letters = list(text)
+    random.shuffle(letters)
+    await interaction.response.send_message("".join(letters))
+
+@tree.command(name="isalpha", description="Check if text is alphabetic")
+async def isalpha(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(str(text.isalpha()))
+
+@tree.command(name="isdigit", description="Check if text is numeric")
+async def isdigit(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(str(text.isdigit()))
+
+@tree.command(name="reversewords", description="Reverse the order of words")
+async def reversewords(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(" ".join(text.split()[::-1]))
+
+@tree.command(name="randomemoji", description="Send a random emoji from a set")
+async def randomemoji(interaction: discord.Interaction):
+    emojis = ["😂","🔥","🎉","💀","🤯","🥳"]
+    await interaction.response.send_message(random.choice(emojis))
+
+@tree.command(name="mockup", description="Mock text with random capitalization")
+async def mockup(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message("".join(c.upper() if random.choice([True,False]) else c.lower() for c in text))
+
+@tree.command(name="doubletext", description="Duplicate text")
+async def doubletext(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(text + text)
+
+@tree.command(name="leetfull", description="Full leet conversion including numbers")
+async def leetfull(interaction: discord.Interaction, text: str):
+    table = str.maketrans("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                          "43071d3f6h1jklmn0pqr57uvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    await interaction.response.send_message(text.translate(table))
+
+@tree.command(name="smallcaps", description="Convert text to small caps")
+async def smallcaps(interaction: discord.Interaction, text: str):
+    table = str.maketrans("abcdefghijklmnopqrstuvwxyz", "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ")
+    await interaction.response.send_message(text.translate(table))
+
+@tree.command(name="reversecapitals", description="Reverse capitalization of letters")
+async def reversecapitals(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message("".join(c.lower() if c.isupper() else c.upper() for c in text))
+
+@tree.command(name="spacify", description="Add spaces between letters")
+async def spacify(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(" ".join(text))
+
+@tree.command(name="compress", description="Remove all spaces")
+async def compress(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(text.replace(" ", ""))
+
+@tree.command(name="alternatingcase", description="Alternating caps by word")
+async def alternatingcase(interaction: discord.Interaction, text: str):
+    words = text.split()
+    await interaction.response.send_message(" ".join(w.upper() if i % 2 == 0 else w.lower() for i,w in enumerate(words)))
+
+@tree.command(name="countvowels", description="Count vowels in text")
+async def countvowels(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(sum(1 for c in text.lower() if c in "aeiou"))
+
+# ================= HELP COMMAND =================
+@tree.command(name="help", description="List all bot commands with descriptions")
+async def help_cmd(interaction: discord.Interaction):
+    commands_list = []
+    for cmd in tree.walk_commands():
+        commands_list.append(f"/{cmd.name} - {cmd.description}")
+    await interaction.response.send_message("**Bot Commands:**\n" + "\n".join(commands_list))
 
 # ================= RUN =================
 bot.run(TOKEN)
