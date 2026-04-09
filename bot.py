@@ -22,9 +22,9 @@ warnings = {}
 automod_enabled = False
 
 # ================= BAD WORD FILTER =================
-# Placeholder for N-word variants
+# Replace placeholders responsibly with any words you want filtered
 bad_words = [
-    "nigga", "niggie", "nigger"  # Replace these placeholders with actual variants responsibly
+    "nigga", "nigger", "fuck"
 ]
 
 # ================= TIME PARSER =================
@@ -168,6 +168,13 @@ async def eight_ball(interaction: discord.Interaction, question: str):
         "Yes.", "No.", "Maybe.", "Definitely.", "I don't think so.", "Absolutely!", "Ask again later."
     ]
     await interaction.response.send_message(f"🎱 Question: {question}\nAnswer: {random.choice(responses)}")
+
+@tree.command(name="roll", description="Roll a dice")
+async def roll(interaction: discord.Interaction, sides: int = 6):
+    if sides < 2:
+        sides = 6
+    result = random.randint(1, sides)
+    await interaction.response.send_message(f"🎲 You rolled a {result} on a {sides}-sided dice!")
 
 @tree.command(name="say", description="Server owner only: Make the bot say something")
 async def say(interaction: discord.Interaction, text: str):
