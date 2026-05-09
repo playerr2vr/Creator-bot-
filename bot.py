@@ -19,6 +19,30 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
+@tree.command(name="say", description="say stuff and everyone ping")
+@app_commands.describe(users="Mention the users you want to ping (separated by space)")
+async def say_command(interaction: discord.Interaction, users: str):
+    if not await is_whitelisted(interaction):
+        return
+    
+    # Split the input into user mentions
+    user_mentions = users.split()
+    
+    if not user_mentions:
+        await interaction.response.send_message("Please mention at least one user!", ephemeral=True)
+        return
+    
+    # Limit to maximum 50 users
+    if len(user_mentions) > 50:
+        await interaction.response.send_message("You can only ping up to **50 users** at once.", ephemeral=True)
+        return
+    
+    # Build the ping message
+    ping_message = " ".join(user_mentions)
+    await interaction.response.send_message(ping_message)
+
+
+
 warnings = {}
 automod_enabled = {}
 bad_words = ["nigga", "nigger", "fuck"]
